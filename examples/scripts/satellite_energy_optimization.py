@@ -86,6 +86,21 @@ SOC_MIN: float = 0.70            # Lower SoC constraint
 SOC_INIT: float = 0.85           # Initial SoC (< 1 avoids PyBaMM boundary event)
 BUS_VOLTAGE_V: float = 100.0     # Nominal DC bus voltage [V]
 
+# PyBaMM's Thevenin model fires boundary events at SoC = 0 and SoC = 1.
+# Clipping the initial (and clamped) SoC to [_SOC_BOUNDARY_EPS, 1−_SOC_BOUNDARY_EPS]
+# avoids a non-positive event check at t = 0.
+_SOC_BOUNDARY_EPS: float = 1e-6
+
+# Small relative margin added to the analytically derived C_min before the
+# PyBaMM verification run.  Without it a floating-point rounding error in the
+# Coulomb integral can push the minimum SoC fractionally below 70 %, causing
+# the constraint check to fail spuriously.
+_CAPACITY_SAFETY_MARGIN: float = 1.001
+
+# Tolerance used when comparing a simulated minimum SoC against the SoC
+# constraint (accounts for floating-point rounding in the Coulomb integral).
+_SOC_CONSTRAINT_TOL: float = 1e-4
+
 
 # ---------------------------------------------------------------------------
 # Data generation / loading
@@ -339,7 +354,7 @@ def simulate_soc_pybamm(
     model = pybamm.equivalent_circuit.Thevenin()
     param = model.default_parameter_values.copy()
     param["Cell capacity [A.h]"] = float(capacity_Ah)
-    param["Initial SoC"] = float(np.clip(soc_init, 1e-6, 1.0 - 1e-6))
+    param["Initial SoC"] = float(np.clip(soc_init, _SOC_BOUNDARY_EPS, 1.0 - _SOC_BOUNDARY_EPS))
 
     # Build a piecewise-linear interpolant for the current so the solver can
     # step through the whole profile without manual looping.
@@ -374,7 +389,7 @@ def _print_summary(
     total_hours = (t[-1] - t[0]) / 3_600.0
     min_soc = float(np.min(soc))
     min_soc_time_h = float(t[np.argmin(soc)]) / 3_600.0
-    constraint_ok = min_soc >= soc_min - 1e-9
+    constraint_ok = min_soc >= soc_min - _SOC_CONSTRAINT_TOL
 
     print("=" * 60)
     print("  Satellite Battery Capacity Optimization — Summary")
@@ -533,11 +548,11 @@ def run(
     # 4. PyBaMM simulation at the computed minimum capacity
     print("\nStep 2: PyBaMM Thevenin-model verification …")
     # Add a small margin (0.1 %) to avoid floating-point boundary violations
-    capacity_verify = capacity_Ah * 1.001
+    capacity_verify = capacity_Ah * _CAPACITY_SAFETY_MARGIN
     soc = simulate_soc_pybamm(t, current_A, capacity_Ah=capacity_verify, soc_init=soc_init)
     min_soc_achieved = float(np.min(soc))
     print(f"  → Minimum SoC in PyBaMM simulation: {min_soc_achieved:.4f} "
-          f"({'✓' if min_soc_achieved >= soc_min - 1e-4 else '✗'})")
+          f"({'✓' if min_soc_achieved >= soc_min - _SOC_CONSTRAINT_TOL else '✗'})")
 
     # 5. Report
     _print_summary(
