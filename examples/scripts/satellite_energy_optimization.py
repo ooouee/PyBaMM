@@ -13,7 +13,7 @@ sample instant:
 
 * ``solar_power_W``    – Solar-panel generation power  (positive, charging)
 * ``thruster_power_W`` – Electric-thruster consumption power  (positive when on)
-* ``rated_load_W``     – Fixed rated bus load  (constant 8 000 W by default)
+* ``rated_load_W``     – Fixed rated bus load  (constant 3 000 W by default)
 
 The data can be provided either as a CSV file (see :func:`load_stk_csv`) or
 generated synthetically for demonstration purposes (see
@@ -81,7 +81,7 @@ import pybamm
 # Tuneable defaults
 # ---------------------------------------------------------------------------
 
-RATED_LOAD_W: float = 8_000.0   # Constant bus load [W]
+RATED_LOAD_W: float = 3_000.0   # Constant bus load [W]
 SOC_MIN: float = 0.70            # Lower SoC constraint
 SOC_INIT: float = 0.85           # Initial SoC (< 1 avoids PyBaMM boundary event)
 BUS_VOLTAGE_V: float = 100.0     # Nominal DC bus voltage [V]
