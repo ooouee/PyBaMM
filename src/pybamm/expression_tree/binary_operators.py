@@ -1492,7 +1492,11 @@ def divide(
 
     # anything divided by zero raises error
     if pybamm.is_scalar_zero(right):
-        raise ZeroDivisionError
+        raise ZeroDivisionError(
+            f"Division by zero: '{right.name}' evaluates to zero. "
+            "A model parameter may have been set to zero that appears in a "
+            "denominator (e.g. 'Cell capacity [A.h]')."
+        )
 
     # Move constant to always be on the left
     # For a division, this means (var / constant) becomes (1/constant * var)

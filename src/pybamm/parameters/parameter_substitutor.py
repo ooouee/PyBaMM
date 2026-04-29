@@ -85,10 +85,16 @@ class ParameterSubstitutor:
         try:
             return self._cache[symbol]
         except KeyError:
-            if not isinstance(symbol, pybamm.FunctionParameter):
-                processed_symbol = self._process_symbol(symbol)
-            else:
-                processed_symbol = self._process_function_parameter(symbol)
+            try:
+                if not isinstance(symbol, pybamm.FunctionParameter):
+                    processed_symbol = self._process_symbol(symbol)
+                else:
+                    processed_symbol = self._process_function_parameter(symbol)
+            except ZeroDivisionError as e:
+                # Re-raise without the KeyError context so the user sees a clear
+                # message rather than confusing "During handling of the above
+                # exception, another exception occurred" output.
+                raise ZeroDivisionError(str(e)) from None
             self._cache[symbol] = processed_symbol
             return processed_symbol
 

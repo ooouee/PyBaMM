@@ -129,6 +129,14 @@ class TestThevenin:
         assert "Initial SoC" in list(values.keys())
         values.process_model(model)
 
+    def test_zero_cell_capacity_raises_clear_error(self):
+        """Setting Cell capacity [A.h] = 0 should raise a clear ZeroDivisionError."""
+        model = pybamm.equivalent_circuit.Thevenin()
+        values = model.default_parameter_values
+        values["Cell capacity [A.h]"] = 0
+        with pytest.raises(ZeroDivisionError, match="Cell capacity"):
+            values.process_model(model)
+
     def test_get_default_quick_plot_variables(self):
         model = pybamm.equivalent_circuit.Thevenin()
         variables = model.default_quick_plot_variables

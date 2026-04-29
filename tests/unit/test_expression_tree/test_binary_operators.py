@@ -637,7 +637,7 @@ class TestBinaryOperators:
         assert (f / v1) == f
         assert (f / -v1) == (-f)
         # division by zero
-        with pytest.raises(ZeroDivisionError):
+        with pytest.raises(ZeroDivisionError, match="Division by zero"):
             b / a
 
         # division with a common term
