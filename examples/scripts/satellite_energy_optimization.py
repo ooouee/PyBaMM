@@ -351,6 +351,13 @@ def simulate_soc_pybamm(
         SoC values [0, 1] at each time stamp, obtained by evaluating the
         PyBaMM solution at every input time stamp.
     """
+    if capacity_Ah <= 0:
+        raise ValueError(
+            f"capacity_Ah must be positive, got {capacity_Ah}. "
+            "If analytical_min_capacity returned 0, the battery is net-charging "
+            "throughout the mission and no minimum capacity constraint is active; "
+            "skip the PyBaMM simulation in that case."
+        )
     model = pybamm.equivalent_circuit.Thevenin()
     param = model.default_parameter_values.copy()
     param["Cell capacity [A.h]"] = float(capacity_Ah)
@@ -544,6 +551,27 @@ def run(
     capacity_Ah = analytical_min_capacity(t, current_A, soc_init=soc_init, soc_min=soc_min)
     print(f"  → C_min = {capacity_Ah:.3f} A·h  "
           f"({capacity_Ah * bus_voltage_V / 1e3:.3f} kW·h)")
+
+    # 4. If capacity is zero the battery is net-charging throughout — skip simulation.
+    if capacity_Ah == 0.0:
+        print(
+            "\nStep 2: PyBaMM simulation skipped — the battery is net-charging "
+            "throughout the entire mission window.  The SoC constraint is always "
+            "satisfied regardless of capacity; no minimum capacity is required."
+        )
+        print("=" * 60)
+        print("  Result: minimum required capacity = 0 A·h")
+        print("  (Solar generation exceeds all loads at every sample instant.)")
+        print("=" * 60)
+        return {
+            "capacity_Ah": 0.0,
+            "soc": None,
+            "min_soc": None,
+            "t": t,
+            "solar_power_W": solar_power_W,
+            "thruster_power_W": thruster_power_W,
+            "current_A": current_A,
+        }
 
     # 4. PyBaMM simulation at the computed minimum capacity
     print("\nStep 2: PyBaMM Thevenin-model verification …")
